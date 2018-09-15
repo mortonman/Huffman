@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
 struct tree_node{
 	char c;
 	int frequency;
@@ -21,8 +20,8 @@ struct binary_table_node{
 };
 
 int is_encoded(FILE *file);
-void encode(FILE *file);
-void decode(FILE *file);
+void encode(FILE *file, char *output_file_name);
+void decode(FILE *file, char *output_file_name);
 void count_char(struct tree_node ***nodes,int *char_count, char c);
 void push(struct queue_node **queue_head, struct tree_node *node);
 struct tree_node *pop(struct queue_node **queue_head);
@@ -43,12 +42,18 @@ void print_tree(struct tree_node *bst, int indent);
 void main(int argc, char **argv){
 	//variable declaration
 	FILE *file;
-	char c;
+	char *output_file_name = NULL;
 
 	//check if a file is provided
 	if(argc < 2){
 		printf("Please provide a file to encode or decode as a command line argument.\n");
 		return;
+	}
+
+	if(argc > 2){
+		output_file_name = argv[2];
+	}else{
+		output_file_name = "output_file";
 	}
 
 	//open file, check if file exists
@@ -58,7 +63,7 @@ void main(int argc, char **argv){
 	}
 
 	//check if file is empty
-	if((c = getc(file))== EOF){
+	if(getc(file)== EOF){
 		printf("The specified file, \"%s\", is empty.\n", argv[1]);
 		fclose(file);
 		return;
@@ -67,9 +72,9 @@ void main(int argc, char **argv){
 	rewind(file);
 
 	if(is_encoded(file)){
-		decode(file);
+		decode(file, output_file_name);
 	}else{
-		encode(file);
+		encode(file, output_file_name);
 	}
 
 	fclose(file);
@@ -95,7 +100,7 @@ int is_encoded(FILE *file){
 	return 1;
 }
 
-void encode(FILE *file){
+void encode(FILE *file, char *output_file_name){
 	if(!file) return;
 	//the number of distinct chars in the original file, required for memory allocation 
 	unsigned int char_count = 1;
@@ -129,7 +134,7 @@ void encode(FILE *file){
 	write_header(file_text, head, &current_bit);
 	encode_text(file, file_text, table, &current_bit);
 	//print_table(table,char_count);
-	FILE *output_file = fopen("output_file", "w+");
+	FILE *output_file = fopen(output_file_name, "w+");
 	fwrite(".8\nz", sizeof(char), 4, output_file);
 	//length in bits of header and encoded text
 	fwrite(&file_length_bits, sizeof(int), 1, output_file);
@@ -144,7 +149,7 @@ void encode(FILE *file){
 	return;
 }
 
-void decode(FILE *file){
+void decode(FILE *file, char * output_file_name){
 	if(!file) return;
 	int bit_count;
 	unsigned char buffer;
@@ -154,7 +159,7 @@ void decode(FILE *file){
 	fread(&bit_count, sizeof(int), 1, file);
 	//printf("\nThe file to be decoded is %i bits (not including magic string, char count, and bit count). \n", bit_count);
 	read_header(&head, file, &current_bit, &buffer);
-	FILE *output = fopen("output_file_2.txt", "w+");
+	FILE *output = fopen(output_file_name, "w+");
 	//print_tree(head, 0);
 	decode_text(file, output, head, bit_count, &current_bit, &buffer);
 	delete_tree(&head);
@@ -168,7 +173,7 @@ void count_char(struct tree_node ***nodes,int *char_count, char c){
 	//printf("\n\nCounting char: %c\n\n", c);
 	if(!(*nodes)){
 		//allocate memory
-		if(!(*nodes = (struct tree_node **)malloc(sizeof(struct tree_node*)*129))) printf("Failed to allocate memory.\n"); // 128 for full ascii set, not all will be used in most cases.
+		if(!(*nodes = (struct tree_node **)malloc(sizeof(struct tree_node*)*128))) printf("Failed to allocate memory.\n"); // 128 for full ascii set, not all will be used in most cases.
 		if(!(**nodes = (struct tree_node *)malloc(sizeof(struct tree_node)))) printf("Failed to allocate memory.\n");
 
 		(**nodes)->c = c;
